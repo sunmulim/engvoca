@@ -1,10 +1,10 @@
 {
-  "name": "단어장",
-  "short_name": "단어장",
+  "name": "영어 단어장",
+  "short_name": "영어 단어장",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#ffffff",
-  "description": "단어를 외우는 영단어장 앱!",
+  "description": "친구가 없으면 공부라도 잘해야지",
   "icons": [
     {
       "src": "icon.png",
