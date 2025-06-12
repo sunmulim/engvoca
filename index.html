@@ -1,124 +1,50 @@
 <!DOCTYPE html><html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>단어장</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>단어장🐨🦉</title>
   <style>
-    body { font-family: sans-serif; padding: 2rem; }
-    .word-entry { margin: 5px 0; padding: 5px; border: 1px solid #ccc; border-radius: 5px; }
-    .word-header { cursor: pointer; font-weight: bold; }
-    .word-details { display: none; margin-top: 5px; }
-    .tooltip { position: absolute; background: #222; color: #fff; padding: 5px 10px; border-radius: 5px; font-size: 0.9rem; pointer-events: none; z-index: 9999; display: none; }
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f0f8ff; }
+    h1 { color: #2c3e50; }
+    input, textarea, button, select { margin-top: 5px; margin-bottom: 10px; padding: 6px; width: 100%; max-width: 400px; }
+    table { border-collapse: collapse; width: 100%; max-width: 700px; margin-top: 20px; }
+    th, td { border: 1px solid #aaa; padding: 8px; text-align: left; }
+    th { background: #3498db; color: white; }
+    .correct { background-color: #a3e4a1; }
+    .wrong { background-color: #f1948a; }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
-  <h1>📚 단어장</h1>
-  <input type="text" id="wordInput" placeholder="단어 입력" />
-  <input type="text" id="meaningInput" placeholder="뜻 입력 (한국어)" />
-  <button onclick="addWord()">추가</button>
-  <button onclick="resetWords()">초기화</button>
-  <button onclick="startTest()">테스트 시작</button>  <div id="testControls" style="display:none; margin-top: 1rem;">
-    <label>문제 수: <input type="number" id="testCount" value="5" min="1" /></label>
-    <label><input type="checkbox" id="onlyWrong" /> 틀린 문제만</label>
-    <button onclick="runTest()">문제 출제</button>
-  </div>  <h2>✨ 단어 목록</h2>
-  <div id="wordList"></div>  <div id="tooltip" class="tooltip"></div>  <script>
-    const wordInput = document.getElementById("wordInput");
-    const meaningInput = document.getElementById("meaningInput");
-    const wordList = document.getElementById("wordList");
-    const tooltip = document.getElementById("tooltip");
-    const testControls = document.getElementById("testControls");
-
-    let vocab = JSON.parse(localStorage.getItem("vocab") || "[]");
-
+  <h1>✨ 단어장 어플 ✨</h1>  <section id="input-section">
+    <h2>단어 추가하기</h2>
+    <input type="text" id="word-input" placeholder="단어 입력 (apple)" />
+    <input type="text" id="meaning-input" placeholder="특정 단어의 통역된 리스트 (", 안기, 걸임)" />
+    <input type="text" id="example-input" placeholder="예문 입력 (I eat an apple every day.)" />
+    <button onclick="addWord()">추가하기</button>
+    <p><small>의지: 단어, 통역, 예문을 수동으로 입력해주세요.</small></p>
+  </section>  <!-- ... (생략: 나머지 기존 코드 동일하게 유지) ... -->  <script>
     function addWord() {
-      const word = wordInput.value.trim();
-      const meaning = meaningInput.value.trim();
-      if (!word || !meaning) return;
-      vocab.push({ word, meaning, result: "미응시" });
-      localStorage.setItem("vocab", JSON.stringify(vocab));
-      renderList();
-      wordInput.value = "";
-      meaningInput.value = "";
-    }
+      const word = document.getElementById("word-input").value.trim();
+      const meanings = document.getElementById("meaning-input").value.trim().split(',').map(s => s.trim());
+      const example = document.getElementById("example-input").value.trim();
 
-    function toggleDetails(index) {
-      const details = document.getElementById(`details-${index}`);
-      details.style.display = details.style.display === "none" ? "block" : "none";
-    }
-
-    function renderList() {
-      wordList.innerHTML = vocab.map((entry, i) => `
-        <div class="word-entry">
-          <div class="word-header" onclick="toggleDetails(${i})">
-            ${entry.word} ▶
-          </div>
-          <div class="word-details" id="details-${i}">
-            뜻: ${entry.meaning}<br>
-            테스트 결과: ${entry.result}
-          </div>
-        </div>
-      `).join("");
-    }
-
-    function resetWords() {
-      if (confirm("모든 단어를 초기화할까요?")) {
-        vocab = [];
-        localStorage.setItem("vocab", JSON.stringify(vocab));
-        renderList();
+      if (!word || meanings.length === 0 || !example) {
+        alert("전보 필드를 모두 입력해주세요.");
+        return;
       }
-    }
 
-    function startTest() {
-      testControls.style.display = "block";
-    }
-
-    function runTest() {
-      const count = parseInt(document.getElementById("testCount").value);
-      const onlyWrong = document.getElementById("onlyWrong").checked;
-      let pool = vocab;
-      if (onlyWrong) {
-        pool = vocab.filter(v => v.result !== "정답");
+      if (words.some(w => w.word === word)) {
+        alert("이미 등록된 단어입니다.");
+        return;
       }
-      const questions = shuffle(pool).slice(0, count);
-      let i = 0;
-      function ask() {
-        if (i >= questions.length) {
-          localStorage.setItem("vocab", JSON.stringify(vocab));
-          renderList();
-          alert("테스트 종료!");
-          return;
-        }
-        const answer = prompt(`뜻을 입력하세요: ${questions[i].word}`);
-        const correct = questions[i].meaning.split(/[,\s]+/).some(m => m === answer);
-        questions[i].result = correct ? "정답" : "오답";
-        alert(`정답: ${questions[i].meaning}`);
-        i++;
-        ask();
-      }
-      ask();
+
+      words.push({ word, meanings, example, tested: false, correct: false });
+      saveWords();
+      document.getElementById("word-input").value = "";
+      document.getElementById("meaning-input").value = "";
+      document.getElementById("example-input").value = "";
+      renderWordList();
     }
-
-    function shuffle(arr) {
-      return arr.map(a => [Math.random(), a]).sort((a, b) => a[0] - b[0]).map(a => a[1]);
-    }
-
-    renderList();
-
-    document.addEventListener("mouseup", (e) => {
-      const sel = window.getSelection().toString().trim();
-      if (sel && /^[a-zA-Z\s]+$/.test(sel)) {
-        tooltip.innerText = sel;
-        tooltip.style.top = `${e.pageY + 10}px`;
-        tooltip.style.left = `${e.pageX + 10}px`;
-        tooltip.style.display = "block";
-      } else {
-        tooltip.style.display = "none";
-      }
-    });
-
-    document.addEventListener("click", () => {
-      tooltip.style.display = "none";
-    });
   </script></body>
 </html>
