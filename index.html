@@ -1,9 +1,8 @@
-<!DOCTYPE html>
-<html lang="ko">
+<!DOCTYPE html><html lang="ko">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🦉🪨🤸‍♂️단어장🐨⌚️👌</title>
+  <title>🐨단어장🦉</title>
   <style>
     body {
       font-family: sans-serif;
@@ -43,6 +42,9 @@
     .incorrect {
       color: red;
     }
+    .hidden {
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -52,14 +54,10 @@
   <button onclick="addWord()">단어 추가</button>
   <button onclick="resetWords()">초기화</button>
   <button onclick="startTest()">테스트</button>
-
-  <h2>단어 목록</h2>
-  <div id="wordList"></div>
-
-  <h2>테스트</h2>
-  <div id="testSection"></div>
-
-  <script>
+  <label><input type="checkbox" id="hideCorrect"> 맞은 문제 제외</label>
+  <button onclick="toggleWordList()">단어장 보기/숨기기</button>  <h2>단어 목록</h2>
+  <div id="wordList"></div>  <h2>테스트</h2>
+  <div id="testSection"></div>  <script>
     let words = JSON.parse(localStorage.getItem("words") || "[]");
 
     function saveWords() {
@@ -99,17 +97,39 @@
       });
     }
 
+    function toggleWordList() {
+      const list = document.getElementById("wordList");
+      list.classList.toggle("hidden");
+    }
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
     function startTest() {
       const testSection = document.getElementById("testSection");
       testSection.innerHTML = "";
-      words.forEach((item, index) => {
+
+      let testWords = [...words];
+      if (document.getElementById("hideCorrect").checked) {
+        testWords = testWords.filter(w => w.correct !== true);
+      }
+      shuffle(testWords);
+
+      document.getElementById("wordList").classList.add("hidden");
+
+      testWords.forEach((item, index) => {
         const div = document.createElement("div");
+        const realIndex = words.findIndex(w => w.word === item.word);
         div.innerHTML = `
           <div class="word-item">
             <strong>${item.word}</strong><br />
-            <input type="text" id="answer-${index}" placeholder="뜻 입력" />
-            <button onclick="checkAnswer(${index})">확인</button>
-            <div id="result-${index}"></div>
+            <input type="text" id="answer-${realIndex}" placeholder="뜻 입력" />
+            <button onclick="checkAnswer(${realIndex})">확인</button>
+            <div id="result-${realIndex}"></div>
           </div>
         `;
         testSection.appendChild(div);
@@ -124,7 +144,7 @@
         result.innerHTML = `<span class="correct">정답! (${correctAnswers.join(', ')})</span>`;
         words[index].correct = true;
       } else {
-        result.innerHTML = `<span class="incorrect">오답. 정답: ${correctAnswers.join(', ')})</span>`;
+        result.innerHTML = `<span class="incorrect">오답. 정답: ${correctAnswers.join(', ')}</span>`;
         words[index].correct = false;
       }
       saveWords();
@@ -132,6 +152,5 @@
     }
 
     displayWords();
-  </script>
-</body>
+  </script></body>
 </html>
