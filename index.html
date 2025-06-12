@@ -3,11 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>💙영어단어장💙</title>
-  <!-- 홈 화면 아이콘 설정 -->
-  <link rel="icon" href="icon.png" type="image/png">
-  <link rel="apple-touch-icon" href="icon.png">
-  <link rel="manifest" href="manifest.json">
+  <title>단어장</title>
   <style>
     /* 전체적인 분위기 */
     body {
@@ -26,21 +22,27 @@
     }
 
     /* 입력 필드와 버튼 스타일 */
-    input[type="text"], button {
+    input[type="text"], input[type="number"], button { /* 숫자 입력 필드 추가 */
       margin: 8px; /* 간격 좀 더 넓게 */
       padding: 12px 15px; /* 패딩 늘려서 클릭/입력 편하게 */
       border-radius: 25px; /* 둥근 모서리 */
       border: none;
       font-size: 1rem;
       transition: all 0.3s ease; /* 부드러운 전환 효과 */
+      vertical-align: middle; /* 세로 정렬 */
     }
 
-    input[type="text"] {
+    input[type="text"], input[type="number"] { /* 숫자 입력 필드 추가 */
       border: 1px solid #B3E5FC; /* 연한 하늘색 테두리 */
       background-color: #FFFFFF; /* 하얀색 배경 */
       box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); /* 은은한 내부 그림자 */
       width: calc(50% - 20px); /* 너비 조정 */
       box-sizing: border-box; /* 패딩/보더 포함 너비 계산 */
+    }
+
+    input[type="number"] {
+        width: 80px; /* 문제 수 입력 필드 너비 조정 */
+        text-align: center;
     }
 
     button {
@@ -61,6 +63,7 @@
         margin-left: 10px;
         font-size: 0.9rem;
         color: #0D47A1;
+        vertical-align: middle; /* 세로 정렬 */
     }
 
     /* 단어 목록 스타일 */
@@ -170,10 +173,13 @@
 
     /* 반응형 디자인 고려 (간단하게) */
     @media (max-width: 600px) {
-        input[type="text"] {
+        input[type="text"], input[type="number"] { /* 숫자 입력 필드 추가 */
             width: calc(100% - 16px); /* 모바일에서 너비 조정 */
             margin: 8px 0;
         }
+         input[type="number"] {
+            width: 100px; /* 모바일에서 숫자 입력 필드 너비 */
+         }
         button {
             width: 100%; /* 모바일에서 버튼 너비 100% */
             margin: 8px 0;
@@ -190,14 +196,20 @@
   </style>
 </head>
 <body>
-  <h1>영어 단어장🧑‍🎓</h1>
+  <h1>단어장</h1>
   <input type="text" id="wordInput" placeholder="단어" />
   <input type="text" id="meaningInput" placeholder="뜻 (쉼표로 구분)" />
   <button onclick="addWord()">단어 추가</button>
   <button onclick="resetWords()">초기화</button>
-  <button onclick="prepareTest()">테스트💌</button>
+
+  <br> <!-- 줄바꿈해서 레이아웃 정리 -->
+
+  <label for="numQuestionsInput">문제 수:</label> <!-- 문제 수 입력 라벨 -->
+  <input type="number" id="numQuestionsInput" value="10" min="1" /> <!-- 문제 수 입력 필드 -->
+  <button onclick="prepareTest()">테스트</button>
   <label><input type="checkbox" id="excludeCorrect" /> 맞은 문제 제외</label>
   <button onclick="toggleWordList()" id="toggleBtn">단어장 보기/숨기기</button>
+
   <div id="wordList"></div>
   <div id="testSection"></div>
   <div id="testModal" style="display:none">
@@ -207,7 +219,7 @@
       <p>남은 시간⌚️: <span id="timer">20</span>초</p>
       <button onclick="showHint()">힌트🔎</button><br>
       <input type="text" id="testAnswer" placeholder="뜻 입력" /><br>
-      <button onclick="submitAnswer()">제출</button>
+      <button onclick="submitAnswer()">제출💌</button>
       <div id="testResult"></div>
     </div>
   </div>
@@ -254,7 +266,7 @@
     function toggleWordList() {
       const list = document.getElementById("wordList");
       const toggleBtn = document.getElementById("toggleBtn");
-      if (list.style.display === "none" || list.innerHTML === "<h2>단어 목록</h2>") { // 초기 상태 또는 숨김 상태
+      if (list.style.display === "none" || list.innerHTML.includes("<h2>단어 목록</h2>") && list.children.length <= 1) { // 초기 상태 또는 숨김 상태 (제목만 있는 경우 포함)
           list.style.display = "block";
           toggleBtn.innerText = "단어장 숨기기";
       } else {
@@ -266,9 +278,32 @@
 
     function prepareTest() {
       const excludeCorrect = document.getElementById("excludeCorrect").checked;
-      currentTest = words.filter(w => !excludeCorrect || w.correct !== true);
-      currentTest = shuffle([...currentTest]);
-      if (currentTest.length === 0) return alert("출제할 문제가 없습니다.");
+      const filteredWords = words.filter(w => !excludeCorrect || w.correct !== true); // 필터링된 단어 목록
+
+      const numQuestionsInput = document.getElementById("numQuestionsInput");
+      const numQuestions = parseInt(numQuestionsInput.value, 10); // 입력된 문제 수 정수로 변환
+
+      // 입력값 유효성 검사
+      if (isNaN(numQuestions) || numQuestions <= 0) {
+          alert("문제 수는 1 이상의 숫자로 입력해주세요.");
+          numQuestionsInput.value = 10; // 기본값으로 되돌림
+          return;
+      }
+
+      if (filteredWords.length === 0) {
+          alert("출제할 문제가 없습니다. (맞은 문제 제외 옵션 확인)");
+          return;
+      }
+
+      if (numQuestions > filteredWords.length) {
+          alert(`입력된 문제 수(${numQuestions}개)가 출제 가능한 문제 수(${filteredWords.length}개)보다 많습니다. 출제 가능한 최대 문제 수로 테스트를 시작합니다.`);
+          currentTest = shuffle([...filteredWords]); // 가능한 모든 문제로 테스트
+      } else {
+          // 필터링된 목록을 섞어서 입력된 수만큼 자르기
+          currentTest = shuffle([...filteredWords]).slice(0, numQuestions);
+      }
+
+
       currentIndex = 0;
       document.getElementById("wordList").style.display = "none"; // 테스트 시작 시 단어장 숨김
       document.getElementById("testModal").style.display = "flex";
@@ -280,7 +315,8 @@
       timeLeft = 20;
       document.getElementById("timer").innerText = timeLeft;
       const current = currentTest[currentIndex];
-      document.getElementById("questionTitle").innerText = `문제 ${currentIndex + 1}`;
+      // 문제 번호 표시 업데이트 (전체 문제 수 반영)
+      document.getElementById("questionTitle").innerText = `문제 ${currentIndex + 1} / ${currentTest.length}`;
       document.getElementById("testWord").innerText = current.word;
       document.getElementById("testAnswer").value = "";
       document.getElementById("testResult").innerText = "";
@@ -306,6 +342,7 @@
       result.innerHTML = isCorrect ? `<span class='correct'>정답! (${correctMeanings.join(', ')})</span>` :
         `<span class='incorrect'>오답. 정답: ${correctMeanings.join(', ')}</span>`;
 
+      // 원본 words 배열에서 해당 단어를 찾아서 correct 상태 업데이트
       const original = words.find(w => w.word === currentTest[currentIndex].word);
       if (original) original.correct = isCorrect; // 정답 여부 업데이트
       saveWords();
@@ -340,8 +377,14 @@
 
     // 페이지 로드 시 단어장 표시 및 버튼 텍스트 설정
     displayWords();
-    document.getElementById("wordList").style.display = "block"; // 기본적으로 보이게
-    document.getElementById("toggleBtn").innerText = "단어장 숨기기";
+    // 단어 목록이 비어있지 않으면 기본적으로 보이게 설정
+    if (words.length > 0) {
+        document.getElementById("wordList").style.display = "block";
+        document.getElementById("toggleBtn").innerText = "단어장 숨기기";
+    } else {
+         document.getElementById("wordList").style.display = "none"; // 단어 없으면 숨김
+         document.getElementById("toggleBtn").innerText = "단어장 보기";
+    }
 
 
   </script>
