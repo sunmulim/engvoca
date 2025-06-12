@@ -40,16 +40,15 @@
       const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
       const data = await res.json();
       const eng = data[0]?.meanings[0]?.definitions[0]?.definition || "";
-      const smpl = data[0]?.meanings[0]?.definitions[0]?.example || "예문 없음";
-      const kor = await translateKorean(eng);
-      return { meaning: kor, example: smpl };
+      const kor = eng ? await translateKorean(eng) : "뜻을 불러올 수 없습니다";
+      return { meaning: kor };
     }
 
     async function addWord() {
       const word = document.getElementById("wordInput").value.trim();
       if (!word) return;
       const info = await fetchWordInfo(word);
-      words.push({ word, ...info, correct: false });
+      words.push({ word, ...info, correct: null });
       localStorage.setItem("words", JSON.stringify(words));
       document.getElementById("wordInput").value = "";
       renderWords();
@@ -71,8 +70,7 @@
           <div class="word">
             <strong>${w.word}</strong><br/>
             뜻: ${w.meaning}<br/>
-            예문: ${w.example}<br/>
-            테스트: ${w.correct ? "✅ 정답" : "❌ 아직 틀림"}
+            ${w.correct === true ? "✅ 정답" : w.correct === false ? "❌ 오답" : ""}
           </div>
         `).join("");
     }
@@ -80,7 +78,7 @@
     function startTest() {
       const count = parseInt(document.getElementById("testCount").value) || 5;
       const filter = document.getElementById("testFilter").value;
-      const targetWords = filter === "wrong" ? words.filter(w => !w.correct) : words;
+      const targetWords = filter === "wrong" ? words.filter(w => w.correct === false) : words;
       const sample = targetWords.sort(() => 0.5 - Math.random()).slice(0, count);
 
       const area = document.getElementById("testArea");
@@ -108,8 +106,8 @@
       if (word) word.correct = isCorrect;
       localStorage.setItem("words", JSON.stringify(words));
       result.innerHTML = isCorrect ?
-        `✅ 정답입니다!<br/>뜻: ${word.meaning}<br/>예문: ${word.example}` :
-        `❌ 오답입니다.<br/>정답: ${word.meaning}<br/>예문: ${word.example}`;
+        `✅ 정답입니다!<br/>뜻: ${word.meaning}` :
+        `❌ 오답입니다.<br/>정답: ${word.meaning}`;
       renderWords();
     }
 
