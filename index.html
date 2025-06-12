@@ -1,8 +1,9 @@
-<!DOCTYPE html><html lang="ko">
+<!DOCTYPE html>
+<html lang="ko">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>단어장</title>
+  <title>🦉🪨🤸‍♂️단어장🐨⌚️👌</title>
   <style>
     body {
       font-family: sans-serif;
@@ -10,7 +11,7 @@
       color: #01579b;
       padding: 20px;
     }
-    h1 {
+    h1, h2 {
       color: #0277bd;
     }
     input, button {
@@ -47,12 +48,18 @@
 <body>
   <h1>단어장</h1>
   <input type="text" id="wordInput" placeholder="단어" />
-  <input type="text" id="meaningInput" placeholder="뜻 (쉼표로 구분)" />
-  <button onclick="addWord()">추가</button>
+  <input type="text" id="meaningInput" placeholder="뜻" />
+  <button onclick="addWord()">단어 추가</button>
   <button onclick="resetWords()">초기화</button>
-  <button onclick="startTest()">테스트</button>  <h2>단어 목록</h2>
-  <div id="wordList"></div>  <h2>테스트</h2>
-  <div id="testSection"></div>  <script>
+  <button onclick="startTest()">테스트</button>
+
+  <h2>단어 목록</h2>
+  <div id="wordList"></div>
+
+  <h2>테스트</h2>
+  <div id="testSection"></div>
+
+  <script>
     let words = JSON.parse(localStorage.getItem("words") || "[]");
 
     function saveWords() {
@@ -117,7 +124,7 @@
         result.innerHTML = `<span class="correct">정답! (${correctAnswers.join(', ')})</span>`;
         words[index].correct = true;
       } else {
-        result.innerHTML = `<span class="incorrect">오답. 정답: ${correctAnswers.join(', ')}</span>`;
+        result.innerHTML = `<span class="incorrect">오답. 정답: ${correctAnswers.join(', ')})</span>`;
         words[index].correct = false;
       }
       saveWords();
@@ -125,5 +132,6 @@
     }
 
     displayWords();
-  </script></body>
+  </script>
+</body>
 </html>
