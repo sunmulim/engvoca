@@ -1,10 +1,10 @@
 {
-  "name": "영어 단어장",
-  "short_name": "영어 단어장",
-  "start_url": ".",
+  "name": "단어장",
+  "short_name": "단어장",
+  "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "description": "친구가 없으면 공부라도 잘해야지",
+  "background_color": "#e0f7fa",
+  "theme_color": "#0288d1",
   "icons": [
     {
       "src": "icon.png",
