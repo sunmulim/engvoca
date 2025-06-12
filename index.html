@@ -1,136 +1,248 @@
-<!DOCTYPE html><html lang="ko">
+<!DOCTYPE html>
+<html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>랜덤 단어 테스트</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f9f9ff;
-      padding: 20px;
-      text-align: center;
-    }
-    .container {
-      max-width: 600px;
-      margin: auto;
-      background: white;
-      padding: 20px;
-      border-radius: 15px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.1);
-    }
-    input, select, button {
-      margin: 10px;
-      padding: 10px;
-      font-size: 16px;
-    }
-    .hidden { display: none; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>단어장 어플</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; background: #f0f8ff; }
+  h1 { color: #2c3e50; }
+  input, textarea, button, select { margin-top: 5px; margin-bottom: 10px; padding: 6px; width: 100%; max-width: 400px; }
+  table { border-collapse: collapse; width: 100%; max-width: 700px; margin-top: 20px; }
+  th, td { border: 1px solid #aaa; padding: 8px; text-align: left; }
+  th { background: #3498db; color: white; }
+  .correct { background-color: #a3e4a1; }
+  .wrong { background-color: #f1948a; }
+  .hidden { display: none; }
+</style>
 </head>
 <body>
-  <div class="container">
-    <h1>📘 랜덤 단어 테스트</h1><div>
-  <input id="wordInput" placeholder="단어 입력" />
-  <button onclick="addWord()">단어 추가</button>
-</div>
+<h1>✨ 단어장 어플 ✨</h1>
 
-<div>
-  <label>문제 개수: </label>
-  <select id="questionCount">
-    <option value="5">5</option>
-    <option value="10">10</option>
-    <option value="all">전체</option>
-  </select>
+<section id="input-section">
+  <h2>단어 추가하기</h2>
+  <input type="text" id="word-input" placeholder="단어 입력 (예: apple)" />
+  <button onclick="addWord()">추가하기</button>
+  <p><small>단어 입력 시 뜻과 예문은 자동 생성됩니다.</small></p>
+</section>
 
-  <label>
-    <input type="radio" name="filter" value="all" checked /> 전체 단어
-  </label>
-  <label>
-    <input type="radio" name="filter" value="wrong" /> 틀린 단어만
-  </label>
+<section id="list-section">
+  <h2>단어 목록</h2>
+  <table id="word-table">
+    <thead>
+      <tr>
+        <th>단어</th>
+        <th>뜻 (여러개)</th>
+        <th>예문</th>
+        <th>테스트 정답 여부</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</section>
 
+<section id="test-section">
+  <h2>테스트</h2>
+  <label for="test-count">문제 개수:</label>
+  <select id="test-count">
+    <option value="3">3개</option>
+    <option value="5" selected>5개</option>
+    <option value="10">10개</option>
+  </select><br />
+  <label><input type="checkbox" id="only-wrong" /> 틀린 단어만 보기</label><br />
   <button onclick="startTest()">테스트 시작</button>
-</div>
 
-<div id="quizBox" class="hidden">
-  <h2 id="quizWord"></h2>
-  <input id="answerInput" placeholder="뜻 입력" />
-  <button onclick="checkAnswer()">정답 확인</button>
-  <p id="feedback"></p>
-  <button onclick="nextQuestion()">다음 문제</button>
-</div>
+  <div id="test-area" class="hidden">
+    <p><strong>단어:</strong> <span id="test-word"></span></p>
+    <label for="answer-input">한글 뜻을 입력하세요:</label><br />
+    <input type="text" id="answer-input" autocomplete="off" /><br />
+    <button onclick="checkAnswer()">확인</button>
+    <p id="feedback"></p>
+    <button onclick="nextQuestion()" style="display:none;">다음 문제</button>
+  </div>
 
-<div id="resultBox" class="hidden">
-  <h3 id="resultText"></h3>
-</div>
+  <div id="test-result" class="hidden">
+    <h3>테스트 결과</h3>
+    <p id="result-summary"></p>
+    <button onclick="endTest()">테스트 종료</button>
+  </div>
+</section>
 
-  </div>  <script>
-    let wordList = [];
-    let testList = [];
-    let current = 0;
-    let correct = 0;
+<script>
+let words = [];
+let testWords = [];
+let currentTestIndex = 0;
+let correctCount = 0;
 
-    function fetchMeaning(word) {
-      return fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`)
-        .then(res => res.json())
-        .then(data => {
-          const meaning = data[0]?.meanings[0]?.definitions[0]?.definition || "뜻 없음";
-          const example = data[0]?.meanings[0]?.definitions[0]?.example || "예문 없음";
-          return { meaning, example };
-        }).catch(() => ({ meaning: "뜻 없음", example: "예문 없음" }));
-    }
+// 저장된 데이터 로드
+function loadWords() {
+  const saved = localStorage.getItem("words");
+  if (saved) {
+    words = JSON.parse(saved);
+  } else {
+    words = [];
+  }
+}
 
-    async function addWord() {
-      const word = document.getElementById("wordInput").value.trim();
-      if (!word) return;
-      const result = await fetchMeaning(word);
-      wordList.push({ word, meaning: result.meaning, example: result.example, correct: false });
-      alert(`추가됨: ${word} → ${result.meaning}`);
-      document.getElementById("wordInput").value = "";
-    }
+// 저장된 데이터 저장
+function saveWords() {
+  localStorage.setItem("words", JSON.stringify(words));
+}
 
-    function startTest() {
-      const count = document.getElementById("questionCount").value;
-      const filter = document.querySelector("input[name='filter']:checked").value;
-      let filtered = [...wordList];
+function fakeApiFetch(word) {
+  const meanings = {
+    apple: ["사과", "애플"],
+    book: ["책", "도서"],
+    cat: ["고양이"],
+    dog: ["개", "강아지"],
+    run: ["달리다", "뛰다"],
+  };
+  const examples = {
+    apple: "I eat an apple every day.",
+    book: "She reads a book.",
+    cat: "The cat is sleeping.",
+    dog: "A dog barks loudly.",
+    run: "He can run fast.",
+  };
 
-      if (filter === "wrong") filtered = filtered.filter(w => !w.correct);
+  return {
+    meanings: meanings[word.toLowerCase()] || ["뜻이 없습니다"],
+    example: examples[word.toLowerCase()] || "예문이 없습니다.",
+  };
+}
 
-      testList = filtered.sort(() => Math.random() - 0.5);
-      if (count !== "all") testList = testList.slice(0, parseInt(count));
+function addWord() {
+  const wordInput = document.getElementById("word-input");
+  const word = wordInput.value.trim();
+  if (!word) {
+    alert("단어를 입력하세요!");
+    return;
+  }
+  if (words.some(w => w.word === word)) {
+    alert("이미 등록된 단어입니다.");
+    wordInput.value = "";
+    return;
+  }
 
-      current = 0;
-      correct = 0;
-      document.getElementById("quizBox").classList.remove("hidden");
-      document.getElementById("resultBox").classList.add("hidden");
-      nextQuestion();
-    }
+  const { meanings, example } = fakeApiFetch(word);
 
-    function nextQuestion() {
-      if (current >= testList.length) {
-        document.getElementById("quizBox").classList.add("hidden");
-        document.getElementById("resultBox").classList.remove("hidden");
-        document.getElementById("resultText").innerText = `${testList.length}문제 중 ${correct}개 정답!`;
-        return;
-      }
-      document.getElementById("quizWord").innerText = testList[current].word;
-      document.getElementById("answerInput").value = "";
-      document.getElementById("feedback").innerText = "";
-    }
+  words.push({
+    word,
+    meanings,
+    example,
+    tested: false,
+    correct: false,
+  });
 
-    function checkAnswer() {
-      const input = document.getElementById("answerInput").value.trim();
-      const answer = testList[current].meaning;
-      const feedback = document.getElementById("feedback");
+  saveWords();
 
-      if (input.toLowerCase() === answer.toLowerCase()) {
-        feedback.innerText = "O 정답입니다!";
-        testList[current].correct = true;
-        correct++;
-      } else {
-        feedback.innerText = `X 오답! 정답: ${answer}`;
-        testList[current].correct = false;
-      }
-      current++;
-    }
-  </script></body>
-</html>
+  wordInput.value = "";
+  renderWordList();
+}
+
+function renderWordList() {
+  const tbody = document.querySelector("#word-table tbody");
+  tbody.innerHTML = "";
+  words.forEach(({ word, meanings, example, tested, correct }) => {
+    const tr = document.createElement("tr");
+    tr.className = correct ? "correct" : tested ? "wrong" : "";
+
+    const meaningsStr = meanings.join(", ");
+    tr.innerHTML = `
+      <td>${word}</td>
+      <td>${meaningsStr}</td>
+      <td>${example}</td>
+      <td>${tested ? (correct ? "⭕️" : "❌") : "–"}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function startTest() {
+  const count = parseInt(document.getElementById("test-count").value);
+  const onlyWrong = document.getElementById("only-wrong").checked;
+
+  if (words.length === 0) {
+    alert("단어가 없습니다! 단어를 먼저 추가해주세요.");
+    return;
+  }
+
+  testWords = onlyWrong ? words.filter(w => w.tested && !w.correct) : [...words];
+
+  if (testWords.length === 0) {
+    alert("테스트할 단어가 없습니다.");
+    return;
+  }
+
+  if (testWords.length > count) {
+    testWords = shuffle(testWords).slice(0, count);
+  }
+
+  currentTestIndex = 0;
+  correctCount = 0;
+
+  document.getElementById("input-section").classList.add("hidden");
+  document.getElementById("list-section").classList.add("hidden");
+  document.getElementById("test-result").classList.add("hidden");
+  document.getElementById("test-section").classList.remove("hidden");
+  document.getElementById("test-area").classList.remove("hidden");
+
+  renderTestQuestion();
+}
+
+function renderTestQuestion() {
+  const wordObj = testWords[currentTestIndex];
+  document.getElementById("test-word").textContent = wordObj.word;
+  const answerInput = document.getElementById("answer-input");
+  answerInput.value = "";
+  answerInput.disabled = false;
+  document.getElementById("feedback").textContent = "";
+  document.querySelector("#test-area button:nth-of-type(2)").style.display = "none";
+  answerInput.focus();
+}
+
+function checkAnswer() {
+  const input = document.getElementById("answer-input").value.trim();
+  const wordObj = testWords[currentTestIndex];
+  const meanings = wordObj.meanings;
+
+  if (!input) {
+    alert("뜻을 입력해주세요.");
+    return;
+  }
+
+  const correct = meanings.some(m => m === input);
+
+  wordObj.tested = true;
+  wordObj.correct = correct;
+
+  if (correct) {
+    correctCount++;
+    document.getElementById("feedback").innerHTML = `✅ 정답입니다! 뜻: ${meanings.join(", ")}<br>예문: ${wordObj.example}`;
+  } else {
+    document.getElementById("feedback").innerHTML = `❌ 틀렸습니다. 뜻: ${meanings.join(", ")}<br>예문: ${wordObj.example}`;
+  }
+
+  saveWords();
+
+  document.querySelector("#test-area button:nth-of-type(2)").style.display = "inline-block";
+  document.getElementById("answer-input").disabled = true;
+}
+
+function nextQuestion() {
+  currentTestIndex++;
+  if (currentTestIndex >= testWords.length) {
+    endTest();
+  } else {
+    renderTestQuestion();
+    document.querySelector("#test-area button:nth-of-type(2)").style.display = "none";
+  }
+}
+
+function endTest() {
+  document.getElementById("test-area").classList.add("hidden");
+  document.getElementById("test-result").classList.remove("hidden");
+  document.getElementById("result-summary").textContent = `총 ${testWords.length}문제 중 ${correctCount}개 맞췄습니다!`;
+
+  document.getElementById("input-section").classList.remove("hidden");
+  document.getElementById("list-section").classList
