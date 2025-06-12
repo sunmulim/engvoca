@@ -2,7 +2,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>영어 단어장</title>
+  <title>단어장</title>
   <style>
     body {
       font-family: sans-serif;
@@ -10,7 +10,7 @@
       color: #01579b;
       padding: 20px;
     }
-    h1, h2 {
+    h1 {
       color: #0277bd;
     }
     input, button {
@@ -42,23 +42,51 @@
     .incorrect {
       color: red;
     }
-    .hidden {
-      display: none;
+    #testModal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    #testBox {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 600px;
+      text-align: center;
     }
   </style>
 </head>
 <body>
-  <h1>🐨단어장🦉</h1>
+  <h1>영어 단어장</h1>
   <input type="text" id="wordInput" placeholder="단어" />
-  <input type="text" id="meaningInput" placeholder="뜻" />
+  <input type="text" id="meaningInput" placeholder="뜻 (쉼표로 구분)" />
   <button onclick="addWord()">단어 추가</button>
   <button onclick="resetWords()">초기화</button>
-  <button onclick="startTest()">테스트</button>
-  <label><input type="checkbox" id="hideCorrect"> 맞은 문제 제외</label>
-  <button onclick="toggleWordList()">단어장 보기/숨기기</button>  <h2>단어 목록</h2>
-  <div id="wordList"></div>  <h2>테스트</h2>
-  <div id="testSection"></div>  <script>
+  <button onclick="prepareTest()">테스트</button>
+  <label><input type="checkbox" id="excludeCorrect" /> 맞은 문제 제외</label>
+  <button onclick="toggleWordList()" id="toggleBtn">단어장 보기/숨기기</button>  <div id="wordList"></div>
+  <div id="testSection"></div>
+  <div id="testModal" style="display:none">
+    <div id="testBox">
+      <h2 id="questionTitle"></h2>
+      <p><strong id="testWord"></strong></p>
+      <p>남은 시간: <span id="timer">20</span>초</p>
+      <button onclick="showHint()">힌트</button><br>
+      <input type="text" id="testAnswer" placeholder="뜻 입력" /><br>
+      <button onclick="submitAnswer()">제출</button>
+      <div id="testResult"></div>
+    </div>
+  </div>  <script>
     let words = JSON.parse(localStorage.getItem("words") || "[]");
+    let currentTest = [], currentIndex = 0, testTimer, timeLeft = 20;
 
     function saveWords() {
       localStorage.setItem("words", JSON.stringify(words));
@@ -81,13 +109,12 @@
         words = [];
         saveWords();
         displayWords();
-        document.getElementById("testSection").innerHTML = "";
       }
     }
 
     function displayWords() {
       const list = document.getElementById("wordList");
-      list.innerHTML = "";
+      list.innerHTML = "<h2>단어 목록</h2>";
       words.forEach((item, index) => {
         const div = document.createElement("div");
         div.className = "word-item";
@@ -99,7 +126,63 @@
 
     function toggleWordList() {
       const list = document.getElementById("wordList");
-      list.classList.toggle("hidden");
+      list.style.display = list.style.display === "none" ? "block" : "none";
+    }
+
+    function prepareTest() {
+      const excludeCorrect = document.getElementById("excludeCorrect").checked;
+      currentTest = words.filter(w => !excludeCorrect || w.correct !== true);
+      currentTest = shuffle([...currentTest]);
+      if (currentTest.length === 0) return alert("출제할 문제가 없습니다.");
+      currentIndex = 0;
+      document.getElementById("wordList").style.display = "none";
+      document.getElementById("testModal").style.display = "flex";
+      showQuestion();
+    }
+
+    function showQuestion() {
+      clearInterval(testTimer);
+      timeLeft = 20;
+      document.getElementById("timer").innerText = timeLeft;
+      const current = currentTest[currentIndex];
+      document.getElementById("questionTitle").innerText = `문제 ${currentIndex + 1}`;
+      document.getElementById("testWord").innerText = current.word;
+      document.getElementById("testAnswer").value = "";
+      document.getElementById("testResult").innerText = "";
+      testTimer = setInterval(() => {
+        timeLeft--;
+        document.getElementById("timer").innerText = timeLeft;
+        if (timeLeft <= 0) submitAnswer();
+      }, 1000);
+    }
+
+    function submitAnswer() {
+      clearInterval(testTimer);
+      const input = document.getElementById("testAnswer").value.trim();
+      const correct = currentTest[currentIndex].meanings.includes(input);
+      const result = document.getElementById("testResult");
+      result.innerHTML = correct ? `<span class='correct'>정답! (${currentTest[currentIndex].meanings.join(', ')})</span>` :
+        `<span class='incorrect'>오답. 정답: ${currentTest[currentIndex].meanings.join(', ')}</span>`;
+
+      const original = words.find(w => w.word === currentTest[currentIndex].word);
+      if (original) original.correct = correct;
+      saveWords();
+
+      setTimeout(() => {
+        currentIndex++;
+        if (currentIndex >= currentTest.length) {
+          document.getElementById("testModal").style.display = "none";
+          displayWords();
+        } else {
+          showQuestion();
+        }
+      }, 2000);
+    }
+
+    function showHint() {
+      const word = currentTest[currentIndex].meanings[0];
+      const hint = word[0] + ' -'.repeat(word.length - 1);
+      alert(`힌트: ${hint}`);
     }
 
     function shuffle(array) {
@@ -107,48 +190,7 @@
         const j = Math.floor(Math.random() * (i + 1));
         [array[i], array[j]] = [array[j], array[i]];
       }
-    }
-
-    function startTest() {
-      const testSection = document.getElementById("testSection");
-      testSection.innerHTML = "";
-
-      let testWords = [...words];
-      if (document.getElementById("hideCorrect").checked) {
-        testWords = testWords.filter(w => w.correct !== true);
-      }
-      shuffle(testWords);
-
-      document.getElementById("wordList").classList.add("hidden");
-
-      testWords.forEach((item, index) => {
-        const div = document.createElement("div");
-        const realIndex = words.findIndex(w => w.word === item.word);
-        div.innerHTML = `
-          <div class="word-item">
-            <strong>${item.word}</strong><br />
-            <input type="text" id="answer-${realIndex}" placeholder="뜻 입력" />
-            <button onclick="checkAnswer(${realIndex})">확인</button>
-            <div id="result-${realIndex}"></div>
-          </div>
-        `;
-        testSection.appendChild(div);
-      });
-    }
-
-    function checkAnswer(index) {
-      const input = document.getElementById(`answer-${index}`).value.trim();
-      const result = document.getElementById(`result-${index}`);
-      const correctAnswers = words[index].meanings;
-      if (correctAnswers.includes(input)) {
-        result.innerHTML = `<span class="correct">정답! (${correctAnswers.join(', ')})</span>`;
-        words[index].correct = true;
-      } else {
-        result.innerHTML = `<span class="incorrect">오답. 정답: ${correctAnswers.join(', ')}</span>`;
-        words[index].correct = false;
-      }
-      saveWords();
-      displayWords();
+      return array;
     }
 
     displayWords();
