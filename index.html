@@ -1,90 +1,213 @@
-<!DOCTYPE html><html lang="ko">
+<!DOCTYPE html>
+<html lang="ko">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>단어장</title>
+  <title>유진호의 영어단어장</title>
   <style>
+    /* 전체적인 분위기 */
     body {
-      font-family: sans-serif;
-      background-color: #e0f7fa;
-      color: #01579b;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* 좀 더 세련된 폰트 */
+      background-color: #F0F8FF; /* 은은한 하늘색 배경 */
+      color: #0D47A1; /* 진한 파란색 글씨 */
       padding: 20px;
+      line-height: 1.6; /* 가독성 개선 */
     }
+
     h1 {
-      color: #0277bd;
+      color: #0277BD; /* 시원한 파란색 제목 */
+      text-align: center;
+      margin-bottom: 30px;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.1); /* 은은한 그림자 */
     }
-    input, button {
-      margin: 5px;
-      padding: 10px;
-      border-radius: 5px;
+
+    /* 입력 필드와 버튼 스타일 */
+    input[type="text"], button {
+      margin: 8px; /* 간격 좀 더 넓게 */
+      padding: 12px 15px; /* 패딩 늘려서 클릭/입력 편하게 */
+      border-radius: 25px; /* 둥근 모서리 */
       border: none;
+      font-size: 1rem;
+      transition: all 0.3s ease; /* 부드러운 전환 효과 */
     }
-    input {
-      border: 1px solid #0288d1;
+
+    input[type="text"] {
+      border: 1px solid #B3E5FC; /* 연한 하늘색 테두리 */
+      background-color: #FFFFFF; /* 하얀색 배경 */
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); /* 은은한 내부 그림자 */
+      width: calc(50% - 20px); /* 너비 조정 */
+      box-sizing: border-box; /* 패딩/보더 포함 너비 계산 */
     }
+
     button {
-      background-color: #0288d1;
+      background-color: #4FC3F7; /* 밝은 파란색 버튼 */
       color: white;
       cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2); /* 버튼 그림자 */
     }
+
     button:hover {
-      background-color: #0277bd;
+      background-color: #0288D1; /* 호버 시 진한 파란색 */
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3); /* 호버 시 그림자 강화 */
+      transform: translateY(-2px); /* 살짝 위로 뜨는 효과 */
     }
+
+    /* 체크박스 스타일 */
+    label {
+        margin-left: 10px;
+        font-size: 0.9rem;
+        color: #0D47A1;
+    }
+
+    /* 단어 목록 스타일 */
+    #wordList {
+        margin-top: 30px;
+        padding: 20px;
+        background-color: #E1F5FE; /* 연한 하늘색 배경 */
+        border-radius: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    #wordList h2 {
+        color: #0277BD;
+        margin-top: 0;
+        border-bottom: 2px solid #B3E5FC; /* 연한 하늘색 밑줄 */
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+    }
+
     .word-item {
-      margin-bottom: 10px;
-      padding: 10px;
-      background-color: #ffffff;
-      border-left: 4px solid #0288d1;
+      margin-bottom: 15px; /* 간격 늘림 */
+      padding: 15px; /* 패딩 늘림 */
+      background-color: #FFFFFF; /* 하얀색 아이템 배경 */
+      border-left: 5px solid #0288D1; /* 진한 파란색 왼쪽 테두리 */
+      border-radius: 8px; /* 둥근 모서리 */
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1); /* 은은한 그림자 */
+      display: flex; /* 내용 정렬 */
+      justify-content: space-between; /* 단어/뜻과 결과 분리 */
+      align-items: center;
     }
+
+    .word-item strong {
+        color: #0D47A1; /* 단어는 진한 파란색 */
+    }
+
     .correct {
-      color: green;
+      color: #388E3C; /* 초록색 (정답) */
+      font-weight: bold;
     }
     .incorrect {
-      color: red;
+      color: #D32F2F; /* 빨간색 (오답) */
+      font-weight: bold;
     }
+
+    /* 모달 스타일 */
     #testModal {
       position: fixed;
       top: 0;
       left: 0;
       width: 100vw;
       height: 100vh;
-      background: rgba(0,0,0,0.7);
+      background: rgba(0,0,0,0.6); /* 좀 더 부드러운 배경 */
       display: flex;
       justify-content: center;
       align-items: center;
       z-index: 1000;
+      backdrop-filter: blur(5px); /* 배경 블러 효과 */
     }
+
     #testBox {
-      background: white;
-      padding: 30px;
-      border-radius: 10px;
+      background: #FFFFFF; /* 하얀색 모달 배경 */
+      padding: 40px; /* 패딩 늘림 */
+      border-radius: 15px; /* 더 둥근 모서리 */
       width: 90%;
-      max-width: 600px;
+      max-width: 500px; /* 최대 너비 조정 */
       text-align: center;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3); /* 모달 그림자 */
+      animation: fadeIn 0.5s ease-out; /* 나타나는 애니메이션 */
     }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: scale(0.9); }
+        to { opacity: 1; transform: scale(1); }
+    }
+
+    #testBox h2 {
+        color: #0277BD;
+        margin-top: 0;
+        margin-bottom: 20px;
+    }
+
+    #testBox p {
+        font-size: 1.1rem;
+        margin-bottom: 15px;
+        color: #0D47A1;
+    }
+
+    #testBox input[type="text"] {
+        width: calc(100% - 30px); /* 모달 내 입력창 너비 */
+        margin-bottom: 20px;
+    }
+
+    #testBox button {
+        margin-top: 10px;
+    }
+
+    #testResult {
+        margin-top: 20px;
+        font-size: 1.1rem;
+        font-weight: bold;
+    }
+
+    #timer {
+        color: #D32F2F; /* 타이머는 빨간색 */
+        font-weight: bold;
+    }
+
+    /* 반응형 디자인 고려 (간단하게) */
+    @media (max-width: 600px) {
+        input[type="text"] {
+            width: calc(100% - 16px); /* 모바일에서 너비 조정 */
+            margin: 8px 0;
+        }
+        button {
+            width: 100%; /* 모바일에서 버튼 너비 100% */
+            margin: 8px 0;
+        }
+        label {
+            display: block; /* 모바일에서 체크박스 아래로 */
+            margin: 10px 0;
+        }
+        #testBox {
+            padding: 20px;
+        }
+    }
+
   </style>
 </head>
 <body>
-  <h1>영어 단어장</h1>
+  <h1>영어 단어장🧑‍🎓</h1>
   <input type="text" id="wordInput" placeholder="단어" />
   <input type="text" id="meaningInput" placeholder="뜻 (쉼표로 구분)" />
   <button onclick="addWord()">단어 추가</button>
   <button onclick="resetWords()">초기화</button>
   <button onclick="prepareTest()">테스트</button>
   <label><input type="checkbox" id="excludeCorrect" /> 맞은 문제 제외</label>
-  <button onclick="toggleWordList()" id="toggleBtn">단어장 보기/숨기기</button>  <div id="wordList"></div>
+  <button onclick="toggleWordList()" id="toggleBtn">단어장 보기/숨기기</button>
+  <div id="wordList"></div>
   <div id="testSection"></div>
   <div id="testModal" style="display:none">
     <div id="testBox">
       <h2 id="questionTitle"></h2>
       <p><strong id="testWord"></strong></p>
-      <p>남은 시간: <span id="timer">20</span>초</p>
-      <button onclick="showHint()">힌트</button><br>
+      <p>남은 시간⌚️: <span id="timer">20</span>초</p>
+      <button onclick="showHint()">힌트🔎</button><br>
       <input type="text" id="testAnswer" placeholder="뜻 입력" /><br>
       <button onclick="submitAnswer()">제출</button>
       <div id="testResult"></div>
     </div>
-  </div>  <script>
+  </div>
+  <script>
     let words = JSON.parse(localStorage.getItem("words") || "[]");
     let currentTest = [], currentIndex = 0, testTimer, timeLeft = 20;
 
@@ -126,8 +249,16 @@
 
     function toggleWordList() {
       const list = document.getElementById("wordList");
-      list.style.display = list.style.display === "none" ? "block" : "none";
+      const toggleBtn = document.getElementById("toggleBtn");
+      if (list.style.display === "none" || list.innerHTML === "<h2>단어 목록</h2>") { // 초기 상태 또는 숨김 상태
+          list.style.display = "block";
+          toggleBtn.innerText = "단어장 숨기기";
+      } else {
+          list.style.display = "none";
+          toggleBtn.innerText = "단어장 보기";
+      }
     }
+
 
     function prepareTest() {
       const excludeCorrect = document.getElementById("excludeCorrect").checked;
@@ -135,7 +266,7 @@
       currentTest = shuffle([...currentTest]);
       if (currentTest.length === 0) return alert("출제할 문제가 없습니다.");
       currentIndex = 0;
-      document.getElementById("wordList").style.display = "none";
+      document.getElementById("wordList").style.display = "none"; // 테스트 시작 시 단어장 숨김
       document.getElementById("testModal").style.display = "flex";
       showQuestion();
     }
@@ -159,29 +290,39 @@
     function submitAnswer() {
       clearInterval(testTimer);
       const input = document.getElementById("testAnswer").value.trim();
-      const correct = currentTest[currentIndex].meanings.includes(input);
+      // 입력된 뜻을 쉼표로 분리하여 배열로 만들고 공백 제거
+      const inputMeanings = input.split(',').map(m => m.trim()).filter(m => m !== '');
+      const correctMeanings = currentTest[currentIndex].meanings;
+
+      // 입력된 뜻 중 하나라도 정답 뜻 목록에 포함되면 정답으로 처리
+      const isCorrect = inputMeanings.some(im => correctMeanings.includes(im));
+
+
       const result = document.getElementById("testResult");
-      result.innerHTML = correct ? `<span class='correct'>정답! (${currentTest[currentIndex].meanings.join(', ')})</span>` :
-        `<span class='incorrect'>오답. 정답: ${currentTest[currentIndex].meanings.join(', ')}</span>`;
+      result.innerHTML = isCorrect ? `<span class='correct'>정답! (${correctMeanings.join(', ')})</span>` :
+        `<span class='incorrect'>오답. 정답: ${correctMeanings.join(', ')}</span>`;
 
       const original = words.find(w => w.word === currentTest[currentIndex].word);
-      if (original) original.correct = correct;
+      if (original) original.correct = isCorrect; // 정답 여부 업데이트
       saveWords();
 
       setTimeout(() => {
         currentIndex++;
         if (currentIndex >= currentTest.length) {
           document.getElementById("testModal").style.display = "none";
-          displayWords();
+          displayWords(); // 테스트 끝나면 단어장 다시 표시
+          document.getElementById("wordList").style.display = "block"; // 단어장 보이게 설정
+          document.getElementById("toggleBtn").innerText = "단어장 숨기기"; // 버튼 텍스트 변경
         } else {
           showQuestion();
         }
-      }, 2000);
+      }, 2000); // 2초 후에 다음 문제 또는 종료
     }
 
     function showHint() {
       const word = currentTest[currentIndex].meanings[0];
-      const hint = word[0] + ' -'.repeat(word.length - 1);
+      if (!word) return alert("힌트가 없습니다."); // 뜻이 없는 경우 처리
+      const hint = word[0] + ' -'.repeat(word.length > 1 ? word.length - 1 : 0); // 단어가 한 글자면 '-' 안 붙임
       alert(`힌트: ${hint}`);
     }
 
@@ -193,6 +334,12 @@
       return array;
     }
 
+    // 페이지 로드 시 단어장 표시 및 버튼 텍스트 설정
     displayWords();
-  </script></body>
+    document.getElementById("wordList").style.display = "block"; // 기본적으로 보이게
+    document.getElementById("toggleBtn").innerText = "단어장 숨기기";
+
+
+  </script>
+</body>
 </html>
