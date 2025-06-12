@@ -2,28 +2,135 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>단어장🐨🦉</title>
+  <title>단어장 어플</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f0f8ff; }
-    h1 { color: #2c3e50; }
-    input, textarea, button, select { margin-top: 5px; margin-bottom: 10px; padding: 6px; width: 100%; max-width: 400px; }
-    table { border-collapse: collapse; width: 100%; max-width: 700px; margin-top: 20px; }
-    th, td { border: 1px solid #aaa; padding: 8px; text-align: left; }
-    th { background: #3498db; color: white; }
-    .correct { background-color: #a3e4a1; }
-    .wrong { background-color: #f1948a; }
-    .hidden { display: none; }
+    :root {
+      --main-bg: #e6f2ff;
+      --card-bg: #ffffff;
+      --accent: #3498db;
+      --correct: #d4f8d4;
+      --wrong: #ffe0e0;
+      --text: #2c3e50;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      background: var(--main-bg);
+      color: var(--text);
+      margin: 0;
+      padding: 20px;
+    }
+    h1, h2 {
+      color: var(--accent);
+    }
+    input, textarea, button, select {
+      margin-top: 5px;
+      margin-bottom: 10px;
+      padding: 8px;
+      width: 100%;
+      max-width: 400px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    button {
+      background-color: var(--accent);
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #217dbb;
+    }
+    section {
+      background: var(--card-bg);
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+      max-width: 800px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+    th, td {
+      border: 1px solid #aaa;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background: var(--accent);
+      color: white;
+    }
+    .correct {
+      background-color: var(--correct);
+    }
+    .wrong {
+      background-color: var(--wrong);
+    }
+    .test-result {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    .test-result.correct {
+      color: green;
+    }
+    .test-result.wrong {
+      color: red;
+    }
+    .hidden {
+      display: none;
+    }
   </style>
 </head>
 <body>
-  <h1>✨ 단어장 어플 ✨</h1>  <section id="input-section">
+  <h1>✨🐨🤸‍♂️ 단어장 🦉🪨 ✨</h1>  <section id="input-section">
     <h2>단어 추가하기</h2>
     <input type="text" id="word-input" placeholder="단어 입력 (apple)" />
-    <input type="text" id="meaning-input" placeholder="특정 단어의 통역된 리스트 (", 안기, 걸임)" />
+    <input type="text" id="meaning-input" placeholder="특정 단어의 통역된 리스트 (\uac00\ub4dd, \uac78\uc784)" />
     <input type="text" id="example-input" placeholder="예문 입력 (I eat an apple every day.)" />
     <button onclick="addWord()">추가하기</button>
     <p><small>의지: 단어, 통역, 예문을 수동으로 입력해주세요.</small></p>
-  </section>  <!-- ... (생략: 나머지 기존 코드 동일하게 유지) ... -->  <script>
+  </section>  <section id="word-list-section">
+    <h2>등록된 단어</h2>
+    <table id="word-table">
+      <thead>
+        <tr><th>단어</th><th>단어 통역</th><th>예문</th><th>테스트 결과</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>  <section id="test-section">
+    <h2>테스트</h2>
+    <button onclick="startTest()">테스트 시작</button>
+    <div id="test-box" class="hidden">
+      <p id="test-question"></p>
+      <input type="text" id="test-answer" placeholder="한글 뜻을 입력하세요" />
+      <button onclick="checkAnswer()">정답 확인</button>
+      <p id="test-feedback" class="test-result"></p>
+      <p id="test-detail" class="test-result"></p>
+    </div>
+  </section>  <script>
+    let words = JSON.parse(localStorage.getItem("vocabWords") || "[]");
+    let currentTestIndex = 0;
+
+    function saveWords() {
+      localStorage.setItem("vocabWords", JSON.stringify(words));
+    }
+
+    function renderWordList() {
+      const tbody = document.querySelector("#word-table tbody");
+      tbody.innerHTML = "";
+      for (const word of words) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${word.word}</td>
+          <td>${word.meanings.join(", ")}</td>
+          <td>${word.example}</td>
+          <td>${word.tested ? (word.correct ? "⭕" : "❌") : ""}</td>
+        `;
+        tbody.appendChild(tr);
+      }
+    }
+
     function addWord() {
       const word = document.getElementById("word-input").value.trim();
       const meanings = document.getElementById("meaning-input").value.trim().split(',').map(s => s.trim());
@@ -46,5 +153,39 @@
       document.getElementById("example-input").value = "";
       renderWordList();
     }
+
+    function startTest() {
+      if (words.length === 0) {
+        alert("테스트할 단어가 없습니다.");
+        return;
+      }
+      currentTestIndex = Math.floor(Math.random() * words.length);
+      const word = words[currentTestIndex];
+      document.getElementById("test-question").textContent = `이 단어의 뜻은? → ${word.word}`;
+      document.getElementById("test-answer").value = "";
+      document.getElementById("test-feedback").textContent = "";
+      document.getElementById("test-detail").textContent = "";
+      document.getElementById("test-feedback").className = "test-result";
+      document.getElementById("test-box").classList.remove("hidden");
+    }
+
+    function checkAnswer() {
+      const userAnswer = document.getElementById("test-answer").value.trim();
+      const word = words[currentTestIndex];
+      const correct = word.meanings.includes(userAnswer);
+      word.tested = true;
+      word.correct = correct;
+      saveWords();
+      renderWordList();
+
+      const feedback = document.getElementById("test-feedback");
+      feedback.textContent = correct ? "정답입니다!" : "틀렸습니다.";
+      feedback.className = "test-result " + (correct ? "correct" : "wrong");
+
+      const detail = document.getElementById("test-detail");
+      detail.textContent = `뜻: ${word.meanings.join(", ")}, 예문: ${word.example}`;
+    }
+
+    renderWordList();
   </script></body>
 </html>
