@@ -1,0 +1,136 @@
+<!DOCTYPE html><html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>랜덤 단어 테스트</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9ff;
+      padding: 20px;
+      text-align: center;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+    }
+    input, select, button {
+      margin: 10px;
+      padding: 10px;
+      font-size: 16px;
+    }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📘 랜덤 단어 테스트</h1><div>
+  <input id="wordInput" placeholder="단어 입력" />
+  <button onclick="addWord()">단어 추가</button>
+</div>
+
+<div>
+  <label>문제 개수: </label>
+  <select id="questionCount">
+    <option value="5">5</option>
+    <option value="10">10</option>
+    <option value="all">전체</option>
+  </select>
+
+  <label>
+    <input type="radio" name="filter" value="all" checked /> 전체 단어
+  </label>
+  <label>
+    <input type="radio" name="filter" value="wrong" /> 틀린 단어만
+  </label>
+
+  <button onclick="startTest()">테스트 시작</button>
+</div>
+
+<div id="quizBox" class="hidden">
+  <h2 id="quizWord"></h2>
+  <input id="answerInput" placeholder="뜻 입력" />
+  <button onclick="checkAnswer()">정답 확인</button>
+  <p id="feedback"></p>
+  <button onclick="nextQuestion()">다음 문제</button>
+</div>
+
+<div id="resultBox" class="hidden">
+  <h3 id="resultText"></h3>
+</div>
+
+  </div>  <script>
+    let wordList = [];
+    let testList = [];
+    let current = 0;
+    let correct = 0;
+
+    function fetchMeaning(word) {
+      return fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`)
+        .then(res => res.json())
+        .then(data => {
+          const meaning = data[0]?.meanings[0]?.definitions[0]?.definition || "뜻 없음";
+          const example = data[0]?.meanings[0]?.definitions[0]?.example || "예문 없음";
+          return { meaning, example };
+        }).catch(() => ({ meaning: "뜻 없음", example: "예문 없음" }));
+    }
+
+    async function addWord() {
+      const word = document.getElementById("wordInput").value.trim();
+      if (!word) return;
+      const result = await fetchMeaning(word);
+      wordList.push({ word, meaning: result.meaning, example: result.example, correct: false });
+      alert(`추가됨: ${word} → ${result.meaning}`);
+      document.getElementById("wordInput").value = "";
+    }
+
+    function startTest() {
+      const count = document.getElementById("questionCount").value;
+      const filter = document.querySelector("input[name='filter']:checked").value;
+      let filtered = [...wordList];
+
+      if (filter === "wrong") filtered = filtered.filter(w => !w.correct);
+
+      testList = filtered.sort(() => Math.random() - 0.5);
+      if (count !== "all") testList = testList.slice(0, parseInt(count));
+
+      current = 0;
+      correct = 0;
+      document.getElementById("quizBox").classList.remove("hidden");
+      document.getElementById("resultBox").classList.add("hidden");
+      nextQuestion();
+    }
+
+    function nextQuestion() {
+      if (current >= testList.length) {
+        document.getElementById("quizBox").classList.add("hidden");
+        document.getElementById("resultBox").classList.remove("hidden");
+        document.getElementById("resultText").innerText = `${testList.length}문제 중 ${correct}개 정답!`;
+        return;
+      }
+      document.getElementById("quizWord").innerText = testList[current].word;
+      document.getElementById("answerInput").value = "";
+      document.getElementById("feedback").innerText = "";
+    }
+
+    function checkAnswer() {
+      const input = document.getElementById("answerInput").value.trim();
+      const answer = testList[current].meaning;
+      const feedback = document.getElementById("feedback");
+
+      if (input.toLowerCase() === answer.toLowerCase()) {
+        feedback.innerText = "O 정답입니다!";
+        testList[current].correct = true;
+        correct++;
+      } else {
+        feedback.innerText = `X 오답! 정답: ${answer}`;
+        testList[current].correct = false;
+      }
+      current++;
+    }
+  </script></body>
+</html>
