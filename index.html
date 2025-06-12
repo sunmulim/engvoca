@@ -1,134 +1,92 @@
-<!DOCTYPE html>
-<html lang="ko">
+<!DOCTYPE html><html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>영단어 단어장 v2</title>
+  <title>단어장 + 번역기</title>
   <style>
-    body { font-family: sans-serif; margin: 20px; background: #f8f9fa; }
-    .word { border: 1px solid #ccc; padding: 10px; margin: 5px 0; background: #fff; }
-    input, button, select { padding: 6px; margin: 4px; }
+    body { font-family: sans-serif; padding: 2rem; }
+    .tooltip {
+      position: absolute;
+      background: #222;
+      color: #fff;
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-size: 0.9rem;
+      pointer-events: none;
+      z-index: 9999;
+      display: none;
+    }
+    .word-entry {
+      margin: 5px 0;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 5px;
+    }
   </style>
 </head>
 <body>
-  <h1>📚 영단어 단어장 🦉🐨</h1>
-  <input id="wordInput" placeholder="영어 단어 입력" />
-  <button onclick="addWord()">단어 추가</button>
-  <button onclick="clearWords()">초기화</button>
-  <div id="wordList"></div>
+  <h1>📚 단어장 + 자동 번역기</h1>
+  <input type="text" id="wordInput" placeholder="단어 입력" />
+  <button onclick="addWord()">추가</button>  <h2>✨ 단어 목록</h2>
+  <div id="wordList"></div>  <p style="margin-top: 3rem;">⚔️ 단어를 드래그하면 번역 툴팁이 나타납니다.</p>
+  <div id="tooltip" class="tooltip"></div>  <script>
+    const tooltip = document.getElementById("tooltip");
+    const wordInput = document.getElementById("wordInput");
+    const wordList = document.getElementById("wordList");
 
-  <div>
-    <h2>🧠 테스트</h2>
-    <input id="testCount" type="number" min="1" max="50" value="5" />
-    <select id="testFilter">
-      <option value="all">전체 단어</option>
-      <option value="wrong">틀린 단어만</option>
-    </select>
-    <button onclick="startTest()">테스트 시작</button>
-  </div>
+    let vocab = JSON.parse(localStorage.getItem("vocab") || "[]");
 
-  <div id="testArea"></div>
-
-  <script>
-    let words = JSON.parse(localStorage.getItem("words") || "[]");
-
-    async function translate(text) {
-      try {
-        const r = await fetch("https://libretranslate.com/translate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ q: text, source: "en", target: "ko", format: "text" })
-        });
-        const d = await r.json();
-        return d.translatedText || "";
-      } catch {
-        return "";
+    async function translateText(text) {
+      if (!("Translator" in window)) {
+        return "⚠️ 이 브라우저는 번역 API를 지원하지 않습니다.";
       }
-    }
-
-    async function fetchInfo(w) {
       try {
-        const r = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${w}`);
-        const d = await r.json();
-        const def = d[0]?.meanings?.[0]?.definitions;
-        if (!def?.length) throw new Error();
-        const english = def[0].definition;
-        let kor = await translate(english);
-        if (!kor) kor = english; 
-        return kor;
-      } catch {
-        return "뜻을 불러올 수 없습니다";
+        const translator = await Translator.create({
+          sourceLanguage: "en",
+          targetLanguage: "ko",
+        });
+        const result = await translator.translate(text);
+        return result;
+      } catch (e) {
+        return "번역 실패: " + e.message;
       }
     }
 
     async function addWord() {
-      const w = document.getElementById("wordInput").value.trim().toLowerCase();
-      if (!w) return alert("단어 입력!");
-      if (words.some(x => x.word === w)) return alert("이미 등록됨!");
-
-      const kor = await fetchInfo(w);
-      words.push({ word: w, meaning: kor, correct: null });
-      localStorage.setItem("words", JSON.stringify(words));
-      document.getElementById("wordInput").value = "";
-      render();
+      const word = wordInput.value.trim();
+      if (!word) return;
+      const meaning = await translateText(word);
+      vocab.push({ word, meaning });
+      localStorage.setItem("vocab", JSON.stringify(vocab));
+      renderList();
+      wordInput.value = "";
     }
 
-    function clearWords() {
-      if (confirm("초기화?")) {
-        words = [];
-        localStorage.removeItem("words");
-        document.getElementById("testArea").innerHTML = "";
-        render();
+    function renderList() {
+      wordList.innerHTML = vocab.map(entry => `
+        <div class="word-entry">
+          <strong>${entry.word}</strong><br>
+          뜻: ${entry.meaning || "(불러오는 중...)"}
+        </div>
+      `).join("");
+    }
+
+    renderList();
+
+    document.addEventListener("mouseup", async (e) => {
+      const sel = window.getSelection().toString().trim();
+      if (sel && /^[a-zA-Z\s]+$/.test(sel)) {
+        const translated = await translateText(sel);
+        tooltip.innerText = translated;
+        tooltip.style.top = `${e.pageY + 10}px`;
+        tooltip.style.left = `${e.pageX + 10}px`;
+        tooltip.style.display = "block";
+      } else {
+        tooltip.style.display = "none";
       }
-    }
+    });
 
-    function render() {
-      const list = document.getElementById("wordList");
-      list.innerHTML = "<h2>📘 등록단어</h2>";
-      words.forEach(w => {
-        const status = w.correct === true ? "✅ 맞음" :
-                       w.correct === false ? "❌ 틀림" : "";
-        list.innerHTML += `<div class="word">
-          <strong>${w.word}</strong><br>
-          뜻: ${w.meaning}<br>
-          ${status}
-        </div>`;
-      });
-    }
-
-    function startTest() {
-      const n = parseInt(document.getElementById("testCount").value) || 1;
-      const f = document.getElementById("testFilter").value;
-      let pool = f === "wrong" ? words.filter(w => w.correct === false) : [...words];
-      if (!pool.length) return alert("시험할 단어 없음!");
-      pool = pool.sort(() => 0.5 - Math.random()).slice(0, n);
-
-      const t = document.getElementById("testArea");
-      t.innerHTML = "";
-      pool.forEach((w, i) => {
-        t.innerHTML += `<div class="word">
-          <strong>${w.word}</strong><br>
-          뜻 입력: <input id="i${i}" data-ans="${w.meaning}" /><button onclick="check('i${i}','${w.word}')">확인</button>
-          <div id="i${i}_r"></div>
-        </div>`;
-      });
-    }
-
-    function check(id, wd) {
-      const ip = document.getElementById(id);
-      const ans = ip.dataset.ans;
-      const ok = ans.includes(ip.value.trim());
-      const div = document.getElementById(id + "_r");
-      const obj = words.find(w => w.word === wd);
-      if (obj) obj.correct = ok;
-      localStorage.setItem("words", JSON.stringify(words));
-      div.innerHTML = ok
-        ? `✅ 정답! 뜻: ${ans}`
-        : `❌ 오답! 정답: ${ans}`;
-      render();
-    }
-
-    render();
-  </script>
-</body>
+    document.addEventListener("click", () => {
+      tooltip.style.display = "none";
+    });
+  </script></body>
 </html>
