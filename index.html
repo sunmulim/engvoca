@@ -1,73 +1,118 @@
 <!DOCTYPE html><html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>단어장 with 자동 뜻 & 예문</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>영단어 마스터</title>
   <style>
-    body {
-      font-family: sans-serif;
-      padding: 2rem;
-      background: #f0f4f7;
-    }
-    input, button {
-      padding: 0.5rem;
-      margin: 0.5rem 0;
-    }
-    .word-entry {
-      border: 1px solid #ccc;
-      background: white;
-      padding: 1rem;
-      margin-top: 1rem;
-    }
+    body { font-family: sans-serif; margin: 20px; background: #f8f9fa; }
+    h1 { color: #333; }
+    input, button, select { padding: 8px; margin: 5px; }
+    .word { border: 1px solid #ccc; padding: 10px; margin: 5px 0; background: #fff; }
+    .test-area { margin-top: 20px; }
   </style>
 </head>
 <body>
-  <h1>📘 단어장: 자동 뜻 & 예문 기능</h1>
-  <input type="text" id="wordInput" placeholder="단어를 입력하세요">
-  <button onclick="addWord()">단어 추가</button>
-  <button onclick="resetWords()" style="margin-left:1rem; background-color: #f88;">초기화</button>
-  <div id="wordList"></div>  <script>
-    let wordList = [];
+  <h1>🌟 영단어 단어장</h1>  <input id="wordInput" placeholder="단어 입력" />
+  <button onclick="addWord()">추가</button>
+  <button onclick="clearWords()">단어장 초기화</button>  <div id="wordList"></div>  <div class="test-area">
+    <h2>🧠 테스트</h2>
+    <label>문제 개수: <input id="testCount" type="number" min="1" max="50" value="5" /></label>
+    <select id="testFilter">
+      <option value="all">모든 단어</option>
+      <option value="wrong">틀린 단어만</option>
+    </select>
+    <button onclick="startTest()">테스트 시작</button>
+    <div id="testArea"></div>
+  </div>  <script>
+    let words = JSON.parse(localStorage.getItem("words") || "[]");
+
+    async function translateKorean(text) {
+      const res = await fetch("https://libretranslate.com/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ q: text, source: "en", target: "ko", format: "text" })
+      });
+      const data = await res.json();
+      return data.translatedText;
+    }
 
     async function fetchWordInfo(word) {
       const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`);
       const data = await res.json();
-      if (!Array.isArray(data)) throw new Error("단어를 찾을 수 없습니다!");
-
-      const meaning = data[0].meanings[0].definitions[0].definition;
-      const example = data[0].meanings[0].definitions[0].example || "예문 없음";
-      return { meaning, example };
+      const eng = data[0]?.meanings[0]?.definitions[0]?.definition || "";
+      const smpl = data[0]?.meanings[0]?.definitions[0]?.example || "예문 없음";
+      const kor = await translateKorean(eng);
+      return { meaning: kor, example: smpl };
     }
 
     async function addWord() {
       const word = document.getElementById("wordInput").value.trim();
-      if (!word) return alert("단어를 입력해주세요!");
+      if (!word) return;
+      const info = await fetchWordInfo(word);
+      words.push({ word, ...info, correct: false });
+      localStorage.setItem("words", JSON.stringify(words));
+      document.getElementById("wordInput").value = "";
+      renderWords();
+    }
 
-      try {
-        const { meaning, example } = await fetchWordInfo(word);
-        const entry = { word, meaning, example };
-        wordList.push(entry);
-        displayWords();
-      } catch (err) {
-        alert("단어 정보를 불러올 수 없습니다: " + err.message);
+    function clearWords() {
+      if (confirm("정말 초기화하시겠습니까?")) {
+        words = [];
+        localStorage.removeItem("words");
+        renderWords();
+        document.getElementById("testArea").innerHTML = "";
       }
     }
 
-    function resetWords() {
-      if (confirm("정말 모든 단어를 초기화할까요?")) {
-        wordList = [];
-        displayWords();
-      }
+    function renderWords() {
+      const list = document.getElementById("wordList");
+      list.innerHTML = "<h2>📚 단어 목록</h2>" +
+        words.map(w => `
+          <div class="word">
+            <strong>${w.word}</strong><br/>
+            뜻: ${w.meaning}<br/>
+            예문: ${w.example}<br/>
+            테스트: ${w.correct ? "✅ 정답" : "❌ 아직 틀림"}
+          </div>
+        `).join("");
     }
 
-    function displayWords() {
-      const container = document.getElementById("wordList");
-      container.innerHTML = "";
-      wordList.forEach(entry => {
-        const div = document.createElement("div");
-        div.className = "word-entry";
-        div.innerHTML = `<strong>${entry.word}</strong><br>뜻: ${entry.meaning}<br>예문: ${entry.example}`;
-        container.appendChild(div);
+    function startTest() {
+      const count = parseInt(document.getElementById("testCount").value) || 5;
+      const filter = document.getElementById("testFilter").value;
+      const targetWords = filter === "wrong" ? words.filter(w => !w.correct) : words;
+      const sample = targetWords.sort(() => 0.5 - Math.random()).slice(0, count);
+
+      const area = document.getElementById("testArea");
+      area.innerHTML = "";
+      sample.forEach((w, i) => {
+        const id = `test_${i}`;
+        area.innerHTML += `
+          <div class="word">
+            <strong>${w.word}</strong><br/>
+            뜻 입력: <input id="${id}" data-answer="${w.meaning}" /><br/>
+            <button onclick="checkAnswer('${id}', '${w.word}')">확인</button>
+            <div id="${id}_result"></div>
+          </div>
+        `;
       });
     }
+
+    function checkAnswer(id, wordText) {
+      const input = document.getElementById(id);
+      const answer = input.dataset.answer;
+      const user = input.value.trim();
+      const isCorrect = answer.includes(user);
+      const result = document.getElementById(`${id}_result`);
+      const word = words.find(w => w.word === wordText);
+      if (word) word.correct = isCorrect;
+      localStorage.setItem("words", JSON.stringify(words));
+      result.innerHTML = isCorrect ?
+        `✅ 정답입니다!<br/>뜻: ${word.meaning}<br/>예문: ${word.example}` :
+        `❌ 오답입니다.<br/>정답: ${word.meaning}<br/>예문: ${word.example}`;
+      renderWords();
+    }
+
+    renderWords();
   </script></body>
 </html>
